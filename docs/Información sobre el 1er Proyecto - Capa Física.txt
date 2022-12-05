@@ -1,0 +1,190 @@
+Integrantes:
+Alejandro Escobar Giraudy C312
+Airelys Pérez Collazo C312
+
+Este programa, confeccionado para la asignatura "Redes de Computadoras",
+constituye el primer proyecto de la asignatura, la Capa Física de una Red de Computadoras.
+
+Lenguaje seleccionado: C#
+
+En la orientación se nos pide que logremos confeccionarlo de forma tal que se puedan
+declarar distintos dispositivos (en este caso solo PCs o HUBs), conectarse entre sí
+y enviarse información.
+
+Claro, para la realización del código hemos tenido en cuenta las buenas prácticas
+de programación implícitas de nuestra carrera, extensibilidad, legibilidad de código,
+nombramiento correcto de variables y métodos, principios SOLID, entre otros.
+Aclaro además que todo el código del programa está totalmente comentado en su ejecución
+paso a paso, en caso de que se desee profundizar en alguna parte en específico.
+
+En el programa se pueden encontrar 4 clases principales:
+-Device, una clase abstracta que encapsula cualquier tipo de dispositivo que se pueda
+utilizar en la red
+-PC, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Puede enviar y recibir información, y posee solo un puerto.
+-HUB, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Tiene una cantidad variable de puertos, y si recibe información por uno de ellos, envía
+dicha información por el resto de puertos.
+-Network, esta clase funciona como la organizadora de la red. Recibe los parámetros del
+script, ejecuta los comandos del mismo y controla el flujo de la red, desde qué dispositivo
+debe enviar información para disminuir el número de colisiones, hasta actualizar el tiempo
+actual de cada dispositivo.
+
+A continuación detallaré los diferentes atributos y métodos utilizados por cada una de las clases.
+Hago énfasis, para más detalles del funcionamiento, leer los comentarios en el código.
+
+Device:
+
+-public int last_actualization { get; protected set; }
+ Muestra el tiempo en el que fue realizada la última actualización
+        
+-public string name { get; protected set; }
+ Nombre del dispositivo
+        
+-protected List<string> historial { get; set; }
+ Muestra el historial de bits enviados o recibidos, así como conexiones inválidas realizadas
+        
+-protected List<Device> devices { get; set; }
+ Muestra los dispositivos a los que se conecta mediante un cable
+        
+-protected string info { get; set; }
+ Muestra la información guardada actualmente en el dispositivo
+        
+-public bool already_working { get; protected set; }
+ Muestra si el dispositivo está realizando alguna acción, ya sea recibir o enviar información
+
+-public abstract void Receive_Info(string bit, int time, string sender);
+ Define el cómo recibirá información el Dispositivo
+        
+-public abstract bool Actualization_Info(string information, int time);
+ Define cómo actualizará la información el dispositivo
+        
+-public abstract string Show_Info();
+ Muestra la información actual que envía el Dispositivo
+        
+-public abstract int Connect(Device device, int port);
+ Conecta uno de los puertos del dispositivo a otro dispositivo
+        
+-public abstract int Disconnect(int port);
+ Desconecta uno de los puertos del dispositivo
+        
+-public abstract int Device_Search(string name);
+ Permite buscar un dispositivo en los puertos a partir de su nombre
+        
+-public abstract string Device_Search(int port);
+ Permite buscar el nomrbe de un dispositivo a partir del puerto en el que se encuentra
+        
+-public abstract void Show_Historial(string directory);
+ Muestra el historial de un dispositivo
+        
+-public abstract string[] Restart();
+  Reinicia la información del dispositivo en caso de que ocurra un problema, y devuelve un array
+  con las informaciones pertinentes
+
+
+PC: Device
+
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos, solo
+posee un atributo nuevo:
+
+-private int actual_info { get; set; }
+ Muestra el bit actual que se está enviando de una cadena completa de bits
+
+
+HUB: Device
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos,
+solo implementa una sobrecarga del método Disconnect:
+
+-public int Disconnect(string name)
+ Método para desconectar la PC de otro dispositivo, mediante su nombre
+        
+
+Network:
+
+-private int time { get; set; }
+ Representa el tiempo global de ejecución
+        
+-private int next_time { get; set; }
+ Representa el próximo momento en el que se actualizarán todos los dispositivos
+        
+-private int interval { get; set; }
+ Representa el interalo de tiempo entre una actualización y otra
+        
+-private List<Device> devices { get; set; }
+ Representa la lista de dispositivos activos
+        
+-private List<string[]> commands { get; set; }
+ Representa los comandos del txt que aún no han podido ser ejecutados
+
+-public void Inicialize_Network(string directory)
+ Este método inicializa el funcionamiento de la red
+        
+-public void Execute_Order(string[] order)        
+ Este método se encarga de ejecutar un comando
+        
+-public bool Already_Info()
+ Este método muestra si alguno de los dispositivos de la red aún está trabajando
+        
+-public int Search(string name)        
+ Este método, dado el nombre de un dispositivo, busca su posición en la lista
+        
+-public void Actualization()        
+ Este método actualiza todos los dispositivos actuales
+        
+-public void Writer(string directory)        
+ Este método hace a todos los dispositivos escribir su historial
+        
+-public void Execute_Possible_Commands()        
+ Este método ejecuta de forma al azar los comandos que sean posible de entre los que no han sido ejecutados
+
+
+
+Ya mencionados los métodos y atributos de las clases se puede dar una idea
+del funcionamiento general del programa. Cada dispositivos tiene conocimiento
+solo de su información, a quién enviarsela y cómo, pero no afecta directamente
+a otros dispositivos ni a la red. Por otro lado, la red controla el orden de
+comandos que debe ejecutar los dispositivos, pero más allá de organizar, no
+afecta directamente a los dispositivos, para así mantener algunos de los
+principios SOLID. No es posible modificar algún atributo de una clase si no
+es a través de ella misma (o de sus hijos en el caso de la herencia) tampoco.
+
+Viene otro tema a discutir, el por qué elegimos esta organización para nuestro proyecto.
+Primeramente se elige una clase abstracta Device por extensibilidad, ya que
+permite esta facilidad gracias a la herencia. La distribución de métodos están
+hechos para que sea posible el trabajo con el dispositivo sin necesidad de
+modificar sus atributos directamente.
+Cada dispositivo, como se vio anteriormente, tiene un historial donde se guarda
+todo lo que ocurre en la transmisión de información.
+Por otro lado, no existe un clase cable porque en esta distribución no
+cumpliría ninguna función específica, por eso la conexión entre dispositivos
+se asume directamente por los dispositivos, tomando una conexión como una referencia
+en el lenguaje C#.
+El tema principal y más polémico a nuestro entender puede ser el de la clase Network,
+controladora principal de la red. Esta, como ya dijimos, se encarga de la organización
+de la red como tal. Esto incluye el procesamiento del txt original y el envío de
+cada comando a su dispositivo correspondiente. También incluye el tema principal
+del proyecto, evitar lo más posible las colisiones. Esto se logró guardando
+en una lista todo comando de envío que se intentara ejecutar cuando ya el dispositivo
+estuviera trabajando. Y luego, en cada actualización de tiempo, de forma aleatoria,
+se verificaba cada uno de los comandos sin ejecutar, y se trabajaba aquellos
+que ya fuera posible continuar. En teoría una colisión no ocurriría si un comando
+nunca se ejecuta a menos que el dispositivo no esté trabajando, y puesto que la red
+trabaja a modo de grafo no dirigido, si un dispositivo no está trabajando, entonces
+todos los dispositivos a los que se puede llegar desde él (su componente conexa)
+tampoco estarán trabajando. Claro, es posible provocar colisiones si se conectan
+dispositivos que estén trabajando en plena ejecución, incluso de otras formas.
+
+El proyecto a nivel físico de compone de 3 .cs:
+-Network.cs, contiene la clase del mismo nombre
+-Devices.cs, contiene las clases Device, PC y HUB
+-Program.cs, procesa el txt y realiza la ejecución principal del programa
+
+Para la correcta ejecución del programa les pedimos por favor que hagan lo siguiente:
+-Una vez compilado, aparecerán las carpeta bin/debug, dentro de esta última, es necesario colocar un txt
+de nombre inicialization.txt, el cual será en el que se guarden los comandos que leerá el programa.
+-Así mismo, dentro de la carpeta Debug, coloque por favor una carpeta de nombre "info", en minúscula, dentro de la misma
+quedarán guardados todos los txt resultante de los distintos dispositivos.
+-Para modificar el intervalo de tiempo entre un envío de bit y otro, modificar dicho parámetro dentro
+del Program.cs, el mismo se identifica con el nombre "interval"
+
+Sin más que decir, esperamos que sea de su agrado el proyecto.

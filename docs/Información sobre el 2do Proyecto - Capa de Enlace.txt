@@ -1,0 +1,322 @@
+Integrantes:
+Alejandro Escobar Giraudy C312
+Airelys Pérez Collazo C312
+
+Este programa, confeccionado para la asignatura "Redes de Computadoras",
+constituye el segundo proyecto de la asignatura, la capa de enlace de una Red de Computadoras.
+
+Lenguaje seleccionado: C#
+
+En la orientación se nos pide que logremos confeccionarlo de forma tal que se puedan
+declarar distintos dispositivos (en este caso solo PCs, Switchs o HUBs), conectarse entre sí
+y enviarse información.
+
+Claro, para la realización del código hemos tenido en cuenta las buenas prácticas
+de programación implícitas de nuestra carrera, extensibilidad, legibilidad de código,
+nombramiento correcto de variables y métodos, principios SOLID, entre otros.
+Aclaro además que todo el código del programa está totalmente comentado en su ejecución
+paso a paso, en caso de que se desee profundizar en alguna parte en específico.
+
+Primeramente, puesto que es uno de los requisitos del proyecto, vamos a enumerar los cambios
+que existen con respecto al proyecto anterior, y que demuestran la extensibilidad y
+capacidad de adaptación a cambio del mismo. Esto se toma a modo de continuación del txt
+del anterior proyecto.
+
+Cambios generales:
+-Fue agregado un nuevo cs, llamado Transformation_Codes, el cual contiene una clase estática
+de igual nombre. Este está concebido solo para guardar métodos que se refieran a transformar
+números a decimal, binario, o hexadecimal.
+-En Program.cs, fueron agregadas varias líneas para mejorar la inclusión de parámetros
+de entrada por txt
+
+Cambios para la inclusión de los 4 nuevos elementos en este proyecto
+Cable Duplex:
+-Fue modificado el parámetro Already_Working que tenía todo dispositivo, dividiéndose ahora
+en Already_Sending y Already_Receiving, que indican los estados de recibir o enviar información
+-Ahora, mediante el método Show_Info de los dispositivos, no devuelve la información
+en el mismo, recibe el nombre de un dispositivo, e indica si por el puerto al que está
+conectado dicho dispositivo se le está enviando información.
+-Se agregan a los dispositivos el método Receiving_Verification, que le permite al dispositivo
+saber si no se le está enviando información en este momento, así mismo ahora en la clase Network
+se comprueba por cada dispositivo si está recibiendo información. Esto ayuda a los dispositivos
+a desechar tramas incompletas debido a desconexiones o colisiones. 
+-Exclusivamente a la PC se le agregó un método Can_Send, que le permite saber si puede enviar
+información en este momento
+
+Dirección Mac:
+-Fue agregado el parámetro mac a las PC, así como un método que le permite
+que se le agregue a una PC un mac
+-En el método Execute_Command de la clase Network fue agregado cómo procesar el comando mac
+
+Trama:
+-Fue agregado el procesamiento del comando Send_Frame en el método Execute_Command de
+la clase Netowrk. Básicamente procesa la información y la convierte en un comando Send, el
+cual encuentra su procesamiento justo a continuación y mantiene la dinámica del proyecto.
+-Fue agregado al Switch y a PC el método Link_Layer, este método decodifica la data que
+recibe el dispositivo y la interpreta como una trama, realizando operaciones según cada
+dispositivo (en el caso de las PC para verificar si es el receptor de esa información
+y poder guardarla en caso afirmativo, y en los Switch para saber el remitente y receptor
+de las distintas tramas y actuar en consecuencia)
+-En PC fue agregado el parámetro data_historial, que contiene las diferentes tramas
+que han llegado a la pc, y a su vez se agregó el método Show_Historial_Data, para poder
+escribir esta información en un txt, el mismo es llamado desde el método Show_Historial
+
+Switch:
+-Fue agregada la clase Switch a Devices.cs, esta hereda de Device e implementa sus métodos
+-En el método Execute_Command de la clase Network fue agregado cómo procesar el comando
+create Switch.
+
+Como se puede apreciar los cambios fueron mínimos en el proyecto, casi en su totalidad
+solo de agregos y no de modificación de lo ya existente.
+De todos estos el más polémico puede ser la inclusión de la modificación de una trama,
+desde la capa de enlace a la física, en Execute_Command en vez de en la propia PC, que
+se supone es quien realiza esta operación. La razón de nuestra elección fue porque
+porque nos pareció que encajaba mejor con la dinámica de Execute_Command (ya que si no
+habría que modificar el cómo recibe y devuelve los comandos las PC), permite reutilizar
+las líneas que habían sido escritas para el funcionamiento de Send y la selección de
+los que pueden ser ejecutados para no crear colisiones, y, porque a su vez nos permitía
+no modificar el código ya existente en la clase PC, dejándole a esta el funcionamiento
+de la capa física de manera homogénea, porque de no ser así, se habría tenido que modificar
+los métodos de envíos para adaptarse a las tramas.
+En resumen, nuestra selección permitió que solo fuera necesario agregar algunas líneas
+en el método Execute_Command para modificar el cambio de Capa de Enlace a la Capa Física
+antes de enviar una trama (no confundir con recibir la información y trnasformarla
+en trama, que sí se encuentra en las PC), y que por tanto, hace que se mantenga la lógica
+de forma íntegra con respecto a la Capa Física.
+
+Ahora comenzaré a hablar, a modo general, del funcionamiento del proyecto.
+
+En el programa se pueden encontrar 6 clases principales:
+-Device, una clase abstracta que encapsula cualquier tipo de dispositivo que se pueda
+utilizar en la red
+-PC, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Puede enviar y recibir información, y posee solo un puerto.
+-HUB, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Tiene una cantidad variable de puertos, y si recibe información por uno de ellos, envía
+dicha información por el resto de puertos.
+-Switch, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Tiene una cantidad variable de puertos, y envía la información a partir de las macs
+que se encuentran en la misma.
+-Network, esta clase funciona como la organizadora de la red. Recibe los parámetros del
+script, ejecuta los comandos del mismo y controla el flujo de la red, desde qué dispositivo
+debe enviar información para disminuir el número de colisiones, hasta actualizar el tiempo
+actual de cada dispositivo.
+-Transformation_Codes, guarda en ella los métodos que se encargan de la transformación de
+números a decimal, binario y hexadecimal.
+
+A continuación detallaré los diferentes atributos y métodos utilizados por cada una de las clases.
+Hago énfasis, para más detalles del funcionamiento, leer los comentarios en el código.
+
+Device:
+
+-public int last_actualization { get; protected set; }
+ Muestra el tiempo en el que fue realizada la última actualización
+        
+-public string name { get; protected set; }
+ Nombre del dispositivo
+        
+-protected List<string> historial { get; set; }
+ Muestra el historial de bits enviados o recibidos, así como conexiones inválidas realizadas
+        
+-protected List<Device> devices { get; set; }
+ Muestra los dispositivos a los que se conecta mediante un cable
+        
+-protected string info { get; set; }
+ Muestra la información guardada actualmente en el dispositivo
+        
+-public bool already_sending { get; protected set; }
+ Muestra si el dispositivo está realizando la acción de enviar información
+        
+-public bool already_receiving { get; protected set; }
+ Muestra si el dispositivo está realizando la acción de recibir información
+
+-public abstract void Receive_Info(string bit, int time, string sender)
+ Define el cómo recibirá información el Dispositivo
+        
+-public abstract bool Actualization_Info(string information, int time)
+ Define cómo actualizará la información el dispositivo
+        
+-public abstract bool Show_Info(string name)
+ Muestra si el dispositivo le ha enviado alguna información al dispositivo remitente
+                
+-public abstract int Connect(Device device, int port)
+ Conecta uno de los puertos del dispositivo a otro dispositivo
+        
+-public abstract int Disconnect(int port)
+ Desconecta uno de los puertos del dispositivo
+        
+-public abstract int Device_Search(string name)
+ Permite buscar un dispositivo en los puertos a partir de su nombre
+        
+-public abstract string Device_Search(int port)
+ Permite buscar el nomrbe de un dispositivo a partir del puerto en el que se encuentra
+        
+-public abstract void Show_Historial(string directory)
+ Muestra el historial de un dispositivo
+        
+-public abstract string[] Restart()
+  Reinicia la información del dispositivo en caso de que ocurra un problema, y devuelve un array
+  con las informaciones pertinentes
+
+-public abstract void Receiving_Verification()
+ Verifica si el dispositivo está recibiendo información por sus puertos
+        
+
+PC: Device
+
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos, posee
+los siguientes atributos y métodos:
+
+-private int actual_info { get; set; }
+ Muestra el bit actual que se está enviando de una cadena completa de bits
+
+-public string mac { get; private set; }
+ Muestra el mac de la PC
+        
+-private List<string> data_historial { get; set; }
+ Muestra el historial de datos que ha llegado al dispositivo
+        
+-private string data { get; set; }
+ Muestra la información actual de la capa de enlace
+
+-private void Link_Layer(string bit)
+Método que transforma la información de la capa física a la capa de enlace
+
+-public void Show_Historial_Data(string directory)
+ Método para mostrar el historial de datos del Dispositivo, correspondiente a la Capa de Enlace
+
+-public void Actualizate_Mac(string mac)
+ Método para poder darle un mac a la PC
+
+-public bool Can_Send()
+ Verifica de antemano si el dispositivo creará una colisión al enviar información
+
+
+HUB: Device
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos,
+solo implementa una sobrecarga del método Disconnect:
+
+-public int Disconnect(string name)
+ Método para desconectar la PC de otro dispositivo, mediante su nombre
+        
+Switch: Device
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos, posee
+los siguientes atributos y métodos:
+
+-private List<List<string>> known_mac { get; set; }
+ Aquí se guardarán todas las mac que hasta ahora conoce el Switch
+
+
+-private List<string> receiving_data { get; set; } 
+ Aquí se guardará toda la información que está recibiendo cada puerto
+
+-private List<Queue<string>> sending_data { get; set; }
+ Aquí se guardará toda la información que debe transmitir un puerto
+
+-private List<string> information { get; set; }
+ Aquí se guardará la información que actualmente se está enviando por cada puerto
+
+-public int Disconnect(string name)
+ Método para desconectar un dispositivo de uno de los puertos, mediante su nombre
+
+-public void Link_Layer(int pos)
+ Método para decodificar la información y pasarla a la capa de enlace
+
+-public int Search_Mac(string mac)
+ Método para saber en cuál de las listas de macs se encuentra una mac
+
+
+Network:
+
+-private int time { get; set; }
+ Representa el tiempo global de ejecución
+        
+-private int next_time { get; set; }
+ Representa el próximo momento en el que se actualizarán todos los dispositivos
+        
+-private int interval { get; set; }
+ Representa el interalo de tiempo entre una actualización y otra
+        
+-private List<Device> devices { get; set; }
+ Representa la lista de dispositivos activos
+        
+-private List<string[]> commands { get; set; }
+ Representa los comandos del txt que aún no han podido ser ejecutados
+
+-public void Inicialize_Network(string directory)
+ Este método inicializa el funcionamiento de la red
+        
+-public void Execute_Order(string[] order)        
+ Este método se encarga de ejecutar un comando
+        
+-public bool Already_Info()
+ Este método muestra si alguno de los dispositivos de la red aún está trabajando
+        
+-public int Search(string name)        
+ Este método, dado el nombre de un dispositivo, busca su posición en la lista
+        
+-public void Actualization()        
+ Este método actualiza todos los dispositivos actuales
+        
+-public void Writer(string directory)        
+ Este método hace a todos los dispositivos escribir su historial
+        
+-public void Execute_Possible_Commands()        
+ Este método ejecuta de forma al azar los comandos que sean posible de entre los que no han sido ejecutados
+
+Transformation_Codes:
+
+-public static int Binary_to_Decimal(string binary)
+ Método para transformar del lenguaje Binario al Decimal
+
+-public static string Decimal_to_Binary(int value)
+ Método para transformar del lenguaje Decimal al Binario
+ 
+-public static int Hexadecimal_to_Decimal(string hexadecimal)
+ Método para transformar del lenguaje Hexadecimal al Decimal
+
+-public static string Decimal_to_Hexadecimal(int value)
+ Método para transformar del lenguaje Decimal al Hexadecimal
+
+-private static int Hexadecimal_to_Decimal_One_Bit(string hexadecimal)
+ Método para transformar un bit del lenguaje Hexadecimal al Decimal
+
+-private static string Decimal_to_Hexadecimal_One_Bit(int value)
+ Método para transformar un bit del lenguaje Decimal al Hexadecimal
+
+-public static string Binary_to_Hexadecimal(string binary)
+ Método para transformar del lenguaje Binario al Hexadecimal
+
+-public static string Hexadecimal_to_Binary(string hexadecimal)
+ Método para transformar del lenguaje Hexadecimal al Binario
+
+-public static string Add_Zero(string number, int length)
+ Método para transformar Agregar ceros a la izquierda de un número
+
+
+Ya mencionados los métodos y atributos de las clases se puede dar una idea
+del funcionamiento general del programa. Cada dispositivos tiene conocimiento
+solo de su información, a quién enviarsela y cómo, pero no afecta directamente
+a otros dispositivos ni a la red. Por otro lado, la red controla el orden de
+comandos que debe ejecutar los dispositivos, pero más allá de organizar, no
+afecta directamente a los dispositivos, para así mantener algunos de los
+principios SOLID. No es posible modificar algún atributo de una clase si no
+es a través de ella misma (o de sus hijos en el caso de la herencia) tampoco.
+
+Por último solo nos resta explicar el cómo concebimos el funcionamiento del Switch:
+
+El Switch recibe información por uno de sus puertos y la va acumulando. Esta
+en cada momento se lee y procesa como una trama, para saber el destinatario y
+remitente de la misma. En caso de que en algún punto se deje de enviar información,
+la misma se borra para evitar el envío de tramas incompletas. En caso de que una
+trama se complete, se colocar en el/los puerto/s correspondiente/s, de ahí comenzará
+a ser enviado bit a bit por dicho puerto.
+O sea, una trama solo llegará a otros dispositivos desde un Switch si está está completa.
+
+El proyecto a nivel físico de compone de 4 .cs:
+-Network.cs, contiene la clase del mismo nombre
+-Devices.cs, contiene las clases Device, PC, HUB y Switch
+-Program.cs, procesa el txt y realiza la ejecución principal del programa
+-Transformation_Device.cs, contiene una clase estática con distintas funcionalidades
+
+Sin más que decir, esperamos que sea de su agrado el proyecto.

@@ -1,0 +1,23 @@
+0 create host pc1
+0 mac pc1 AAAA
+0 ip pc1 1.1.1.1 255.255.255.0
+0 route add pc1 2.2.2.0 255.255.255.0 1.1.1.0 1
+0 route add pc1 0.0.0.0 0.0.0.0 1.1.1.0 1
+0 create host pc2
+0 mac pc2 BBBB
+0 ip pc2 2.2.2.2 2.2.2.2
+0 route add pc2 1.1.1.0 255.255.255.0 2.2.2.0 1
+0 route add pc2 0.0.0.0 0.0.0.0 2.2.2.0 1
+4 create router router1 2
+4 mac router1:1 CCCC
+4 mac router1:2 DDDD
+4 ip router1:1 1.1.1.0 255.255.255.0
+4 ip router1:2 2.2.2.0 255.255.255.0
+4 route add router1 1.1.1.0 255.255.255.0 0.0.0.0 1
+4 route add router1 2.2.2.0 255.255.255.0 0.0.0.0 2
+6 connect pc1_1 router1_1
+6 connect pc2_1 router1_2
+4 send_packet pc1 2.2.2.2 AA
+
+4 route add router1 2.2.2.0 255.255.255.0 0.0.0.0 2
+4 ping pc1 2.2.2.2

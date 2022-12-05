@@ -1,0 +1,324 @@
+Integrantes:
+Alejandro Escobar Giraudy C312
+Airelys Pérez Collazo C312
+
+Este programa, confeccionado para la asignatura "Redes de Computadoras",
+constituye el tercer proyecto de la asignatura, el agrego de un código en las tramas
+para la detección de errores en la capa de enlace de una Red de Computadoras.
+
+Lenguaje seleccionado: C#
+
+En la orientación se nos pide que logremos confeccionarlo de forma tal que se puedan
+declarar distintos dispositivos (en este caso solo PCs, Switchs o HUBs), conectarse entre sí
+y enviarse información.
+
+Claro, para la realización del código hemos tenido en cuenta las buenas prácticas
+de programación implícitas de nuestra carrera, extensibilidad, legibilidad de código,
+nombramiento correcto de variables y métodos, principios SOLID, entre otros.
+Aclaro además que todo el código del programa está totalmente comentado en su ejecución
+paso a paso, en caso de que se desee profundizar en alguna parte en específico.
+
+Primeramente, puesto que es uno de los requisitos del proyecto, vamos a enumerar los cambios
+que existen con respecto al proyecto anterior, y que demuestran la extensibilidad y
+capacidad de adaptación a cambio del mismo. Esto se toma a modo de continuación del txt
+del anterior proyecto.
+
+Cambios generales:
+-Fue agregado un nuevo cs, llamado Data_Verification, el cual contiene una clase
+de igual nombre. Este está concebida a modo de un diccionario que permita la ejecución
+de códigos de cifrado a partir de palabras definididas en el txt de entrada.
+-En Program.cs, fueron agregadas varias líneas para mejorar la inclusión de parámetros
+de entrada por txt, ahora se utilizan estrictamente las palabras claves signal_time
+para cambiar el intervalo de ejecución de los dispositivos, y error_detection para
+designar qué método de cifrado será usado por las PC
+
+Cambios Específicos:
+-Ahora en Network y en el Program.cs la variable interval pasa a llamarse
+signal_time
+-En Network y en PC se agrega al parámetro error_detection como parámetro de entrada,
+que determina el método de cifrado que será usado.
+-En el switch y PC es agregado que calculen la trama completa, incluyendo el cifrado,
+para así saber su tamaño, a partir del campo que indica su tamaño, y que antes era
+un campo extra con 00000000
+-La PC ahora utiliza el método de cifrado con la data que obtiene, y la compara
+con el cifrado para ver si son iguales.
+-Ahora en Execute_Order de Network utiliza el método de cifrado designado para agregarlo
+a la trama
+-Al proyecto le fueron dos métodos de cifrado, los cuales son los siguientes:
+
+Método Sum_Hex:
+El enunciado en la orden del 3er proyecto. Se convierte el número en hexadecimal
+y se suman todos los bytes del mismo. Siendo el código resultante la suma como número binario
+
+Método Cuadratic_Codificator:
+Se convierte la data en un número decimal n. Luego se busca un número k, tal que k>=n, y
+k es el menor número que, con la restricción anterior, cumple que sqrt(k) pertenece a los
+enteros. Luego, tomamos j = k-n. El código resultante será la concatenación en binario de
+k y j.
+Notemos lo siguiente:
+Puesto que, como se dijo en la orden del 2do proyecto, data es a lo sumo 65535, su número
+k más cercano es su sucesor, 65536, donde sqrt(65536) = 256, que en binario es 100000000,
+por lo tanto, a lo sumo, n tendrá en binario 9 dígitos, por otro lado, 255^2 = 65025, donde
+256^2 - (255^2 + 1) = 510, es el espaciamiento más grande que hay en el rango del cuadrado
+de todos los números entre 1 y 256, como 510 en binario es 111111110, j en binario tendrá
+a lo sumo 9 dígitos. Por tanto, la concatenación de k y j tendrá a lo sumo 18 dígitos en binario
+Entonces, este método crea una biyección entre los números del 1 al 65536 en binario, y los números
+en binario de hasta 18 dígitos, siendo capaz de incluso, a partir de este último, recuperar
+la información del primero.
+
+Como se puede apreciar los cambios fueron mínimos en el proyecto, casi en su totalidad
+solo de agregos y no de modificación de lo ya existente.
+
+Ahora comenzaré a hablar, a modo general, del funcionamiento del proyecto.
+
+En el programa se pueden encontrar 7 clases principales:
+-Device, una clase abstracta que encapsula cualquier tipo de dispositivo que se pueda
+utilizar en la red
+-PC, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Puede enviar y recibir información, y posee solo un puerto.
+-HUB, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Tiene una cantidad variable de puertos, y si recibe información por uno de ellos, envía
+dicha información por el resto de puertos.
+-Switch, clase que hereda de Device y funciona según lo establecido en la orden del proyecto.
+Tiene una cantidad variable de puertos, y envía la información a partir de las macs
+que se encuentran en la misma.
+-Network, esta clase funciona como la organizadora de la red. Recibe los parámetros del
+script, ejecuta los comandos del mismo y controla el flujo de la red, desde qué dispositivo
+debe enviar información para disminuir el número de colisiones, hasta actualizar el tiempo
+actual de cada dispositivo.
+-Transformation_Codes, guarda en ella los métodos que se encargan de la transformación de
+números a decimal, binario y hexadecimal.
+Data_Verification, funciona a modo de diccionario, donde con palabras claves devuelve
+métodos de codificación.
+
+A continuación detallaré los diferentes atributos y métodos utilizados por cada una de las clases.
+Hago énfasis, para más detalles del funcionamiento, leer los comentarios en el código.
+
+Device:
+
+-public int last_actualization { get; protected set; }
+ Muestra el tiempo en el que fue realizada la última actualización
+        
+-public string name { get; protected set; }
+ Nombre del dispositivo
+        
+-protected List<string> historial { get; set; }
+ Muestra el historial de bits enviados o recibidos, así como conexiones inválidas realizadas
+        
+-protected List<Device> devices { get; set; }
+ Muestra los dispositivos a los que se conecta mediante un cable
+        
+-protected string info { get; set; }
+ Muestra la información guardada actualmente en el dispositivo
+        
+-public bool already_sending { get; protected set; }
+ Muestra si el dispositivo está realizando la acción de enviar información
+        
+-public bool already_receiving { get; protected set; }
+ Muestra si el dispositivo está realizando la acción de recibir información
+
+-public abstract void Receive_Info(string bit, int time, string sender)
+ Define el cómo recibirá información el Dispositivo
+        
+-public abstract bool Actualization_Info(string information, int time)
+ Define cómo actualizará la información el dispositivo
+        
+-public abstract bool Show_Info(string name)
+ Muestra si el dispositivo le ha enviado alguna información al dispositivo remitente
+                
+-public abstract int Connect(Device device, int port)
+ Conecta uno de los puertos del dispositivo a otro dispositivo
+        
+-public abstract int Disconnect(int port)
+ Desconecta uno de los puertos del dispositivo
+        
+-public abstract int Device_Search(string name)
+ Permite buscar un dispositivo en los puertos a partir de su nombre
+        
+-public abstract string Device_Search(int port)
+ Permite buscar el nomrbe de un dispositivo a partir del puerto en el que se encuentra
+        
+-public abstract void Show_Historial(string directory)
+ Muestra el historial de un dispositivo
+        
+-public abstract string[] Restart()
+  Reinicia la información del dispositivo en caso de que ocurra un problema, y devuelve un array
+  con las informaciones pertinentes
+
+-public abstract void Receiving_Verification()
+ Verifica si el dispositivo está recibiendo información por sus puertos
+        
+
+PC: Device
+
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos, posee
+los siguientes atributos y métodos:
+
+-private int actual_info { get; set; }
+ Muestra el bit actual que se está enviando de una cadena completa de bits
+
+-public string mac { get; private set; }
+ Muestra el mac de la PC
+        
+-private List<string> data_historial { get; set; }
+ Muestra el historial de datos que ha llegado al dispositivo
+        
+-private string data { get; set; }
+ Muestra la información actual de la capa de enlace
+
+-private string error_detection { get; set; }
+ Representa el método utilizado para detectar errores
+
+-private void Link_Layer(string bit)
+Método que transforma la información de la capa física a la capa de enlace
+
+-public void Show_Historial_Data(string directory)
+ Método para mostrar el historial de datos del Dispositivo, correspondiente a la Capa de Enlace
+
+-public void Actualizate_Mac(string mac)
+ Método para poder darle un mac a la PC
+
+-public bool Can_Send()
+ Verifica de antemano si el dispositivo creará una colisión al enviar información
+
+
+HUB: Device
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos,
+solo implementa una sobrecarga del método Disconnect:
+
+-public int Disconnect(string name)
+ Método para desconectar la PC de otro dispositivo, mediante su nombre
+        
+Switch: Device
+Además de implementar los métodos ya mencionados en Device, y utilizar sus atributos, posee
+los siguientes atributos y métodos:
+
+-private List<List<string>> known_mac { get; set; }
+ Aquí se guardarán todas las mac que hasta ahora conoce el Switch
+
+-private List<string> receiving_data { get; set; } 
+ Aquí se guardará toda la información que está recibiendo cada puerto
+
+-private List<Queue<string>> sending_data { get; set; }
+ Aquí se guardará toda la información que debe transmitir un puerto
+
+-private List<string> information { get; set; }
+ Aquí se guardará la información que actualmente se está enviando por cada puerto
+
+-public int Disconnect(string name)
+ Método para desconectar un dispositivo de uno de los puertos, mediante su nombre
+
+-public void Link_Layer(int pos)
+ Método para decodificar la información y pasarla a la capa de enlace
+
+-public int Search_Mac(string mac)
+ Método para saber en cuál de las listas de macs se encuentra una mac
+
+
+Network:
+
+-private int time { get; set; }
+ Representa el tiempo global de ejecución
+        
+-private int next_time { get; set; }
+ Representa el próximo momento en el que se actualizarán todos los dispositivos
+        
+-private int signal_time { get; set; }
+ Representa el interalo de tiempo entre una actualización y otra
+
+-private string error_detection { get; set; }
+ Representa el método utilizado para detectar errores
+        
+-private List<Device> devices { get; set; }
+ Representa la lista de dispositivos activos
+        
+-private List<string[]> commands { get; set; }
+ Representa los comandos del txt que aún no han podido ser ejecutados
+
+-public void Inicialize_Network(string directory)
+ Este método inicializa el funcionamiento de la red
+        
+-public void Execute_Order(string[] order)        
+ Este método se encarga de ejecutar un comando
+        
+-public bool Already_Info()
+ Este método muestra si alguno de los dispositivos de la red aún está trabajando
+        
+-public int Search(string name)        
+ Este método, dado el nombre de un dispositivo, busca su posición en la lista
+        
+-public void Actualization()        
+ Este método actualiza todos los dispositivos actuales
+        
+-public void Writer(string directory)        
+ Este método hace a todos los dispositivos escribir su historial
+        
+-public void Execute_Possible_Commands()        
+ Este método ejecuta de forma al azar los comandos que sean posible de entre los que no han sido ejecutados
+
+Transformation_Codes:
+
+-public static int Binary_to_Decimal(string binary)
+ Método para transformar del lenguaje Binario al Decimal
+
+-public static string Decimal_to_Binary(int value)
+ Método para transformar del lenguaje Decimal al Binario
+ 
+-public static int Hexadecimal_to_Decimal(string hexadecimal)
+ Método para transformar del lenguaje Hexadecimal al Decimal
+
+-public static string Decimal_to_Hexadecimal(int value)
+ Método para transformar del lenguaje Decimal al Hexadecimal
+
+-private static int Hexadecimal_to_Decimal_One_Bit(string hexadecimal)
+ Método para transformar un bit del lenguaje Hexadecimal al Decimal
+
+-private static string Decimal_to_Hexadecimal_One_Bit(int value)
+ Método para transformar un bit del lenguaje Decimal al Hexadecimal
+
+-public static string Binary_to_Hexadecimal(string binary)
+ Método para transformar del lenguaje Binario al Hexadecimal
+
+-public static string Hexadecimal_to_Binary(string hexadecimal)
+ Método para transformar del lenguaje Hexadecimal al Binario
+
+-public static string Add_Zero(string number, int length)
+ Método para transformar Agregar ceros a la izquierda de un número
+
+Data_Verification:
+
+-protected Dictionary<string, Func<string, string>> dictionary { get; set; }
+ Diccionario que dado un string, devuelve una función de cifrado
+
+-public string Evaluate(string data, string method)
+ Método que dada una palabra devuelve un método de cifrado
+
+-public void Set_Defaul_Values()
+ Método que agrega al diccionario los dos métodos de cifrado por default
+
+-public List<string> Keys()
+ Método que devuelve todas las palabras claves para obtener los métodos de cifrado
+
+-private static string Cuadratic_Codificator(string word)
+ Método de Cifrado #1
+
+-private static string Sum_Codificator(string word)
+ Método de cifrado #2
+
+
+Ya mencionados los métodos y atributos de las clases se puede dar una idea
+del funcionamiento general del programa. Cada dispositivos tiene conocimiento
+solo de su información, a quién enviarsela y cómo, pero no afecta directamente
+a otros dispositivos ni a la red. Por otro lado, la red controla el orden de
+comandos que debe ejecutar los dispositivos, pero más allá de organizar, no
+afecta directamente a los dispositivos, para así mantener algunos de los
+principios SOLID. No es posible modificar algún atributo de una clase si no
+es a través de ella misma (o de sus hijos en el caso de la herencia) tampoco.
+
+El proyecto a nivel físico de compone de 4 .cs:
+-Network.cs, contiene la clase del mismo nombre
+-Devices.cs, contiene las clases Device, PC, HUB y Switch
+-Program.cs, procesa el txt y realiza la ejecución principal del programa
+-Transformation_Device.cs, contiene una clase estática con distintas funcionalidades
+
+Sin más que decir, esperamos que sea de su agrado el proyecto.
